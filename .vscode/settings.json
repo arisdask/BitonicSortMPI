@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "row_sort_operations.h": "c",
+        "bitonic_sort.h": "c",
+        "utils.h": "c",
+        "string.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "format": "c",
+        "initializer_list": "c",
+        "span": "c",
+        "validation.h": "c",
+        "algorithm": "c"
+    }
+}
