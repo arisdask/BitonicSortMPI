@@ -3,23 +3,24 @@
 
 // Local sort for a single row
 void local_sort(int* row, int cols, bool ascending) {
-    for (int i = 0; i < cols - 1; i++) {
-        for (int j = 0; j < cols - i - 1; j++) {
-            if (ascending) {
-                if (row[j] > row[j + 1]) {
-                    int temp = row[j];
-                    row[j] = row[j + 1];
-                    row[j + 1] = temp;
-                }
-            } else {
-                if (row[j] < row[j + 1]) {
-                    int temp = row[j];
-                    row[j] = row[j + 1];
-                    row[j + 1] = temp;
-                }
-            }
+    #if SORT_VERSION == 0
+        if (row == NULL || cols <= 0) {
+            return;
         }
-    }
+        
+        // Comparison functions definitions
+        int compare_asc(const void* a, const void* b)  { return (*(int*)a - *(int*)b); }
+        int compare_desc(const void* a, const void* b) { return (*(int*)b - *(int*)a); }
+        
+        // Choose comparison function based on sort direction
+        int (*compare_func)(const void*, const void*) = ascending ? compare_asc : compare_desc;
+        
+        // Call qsort with appropriate comparison function
+        qsort(row, cols, sizeof(int), compare_func);
+
+    #else
+        // TODO: multithreaded sorting
+    #endif
 }
 
 
@@ -36,7 +37,7 @@ void print_row(int* row, int cols, int rank, int size) {
     for (int i = 0; i < size; i++) {
         if (rank == i) {
             // Only the current rank prints its row
-            size_t buffer_size = 1000;
+            size_t buffer_size = 1024;
             char* buffer = (char*)malloc(buffer_size);
             if (!buffer) {
                 fprintf(stderr, "Rank %d: Memory allocation failed\n", rank);
@@ -65,5 +66,3 @@ void print_row(int* row, int cols, int rank, int size) {
         MPI_Barrier(MPI_COMM_WORLD);
     }
 }
-
-

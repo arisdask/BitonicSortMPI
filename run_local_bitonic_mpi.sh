@@ -22,4 +22,4 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-mpirun -np 16 ./bin/bitonic_mpi "$VALUE1" "$VALUE2"
+mpirun -np 8 ./bin/bitonic_mpi "$VALUE1" "$VALUE2"

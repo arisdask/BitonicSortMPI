@@ -11,12 +11,12 @@
 
 
 /**
- * Implements the parallel bitonic sort algorithm for a 2D matrix.
+ * Implements the distributed bitonic sort algorithm.
  * Each process handles a single row and communicates with the rest as needed.
  * 
- * @param local_row  Array containing the local portion of the matrix (the full array to be sorted)
- * @param rows       Total number of rows(processes) in the complete matrix
- * @param cols       Number of columns in each row
+ * @param local_row  Array containing the local portion of the matrix (the local array)
+ * @param rows       Total number of rows(processes)
+ * @param cols       Number of columns/elements in each row
  * @param rank       Rank of the current process
  * 
  */

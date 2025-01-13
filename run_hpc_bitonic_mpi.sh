@@ -12,6 +12,7 @@ module load gcc openmpi
 
 # Set environment variables
 export UCX_WARN_UNUSED_ENV_VARS=n
+export UCX_TLS=tcp               # Use TCP for UCX transport
 
 # Clean, build, and check for errors
 make clean

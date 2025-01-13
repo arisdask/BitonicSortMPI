@@ -51,34 +51,40 @@ int main(int argc, char* argv[]) {
     double startTime = MPI_Wtime();
 
     bitonic_sort(local_row, total_rows, total_cols, rank);
-
-    // Ensure all processes have finished sorting
+    
+    double localEndTime = MPI_Wtime();
+    double localTime = localEndTime - startTime;
     MPI_Barrier(MPI_COMM_WORLD);
-    double endTime = MPI_Wtime();
 
+    // Find the maximum time across all processes
+    double maxTime;
+    MPI_Reduce(&localTime, &maxTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        printf("\nSorting All Rows: Done.\n");
-        printf("Sorting time: %f seconds\n", endTime - startTime);
+        printf("Sorting Time: %f msec\n", maxTime * 1000);
+        fflush(stdout);
     }
-    
-    // Ensure header is printed
-    // MPI_Barrier(MPI_COMM_WORLD);
-    // print_row(local_row, total_cols, rank, size);
+
     MPI_Barrier(MPI_COMM_WORLD);
 
-    bool is_ascending;
+    bool eval_flag = true;
+    validate_bitonic_sort(local_row, total_cols, rank, size, &eval_flag);
 
-    if (is_localy_sorted(local_row, total_cols, &is_ascending)) {
-        printf("-> Rank: %d is sorted in order: %s.\n", rank, is_ascending ? "Ascending" : "Descending!!");
-    } else {
-        printf("-> Rank: %d is not sorted.\n", rank);
+    // Variable to store the reduced result at rank 0
+    bool global_eval_flag = true;
+
+    // Perform logical AND reduction of all eval_flags to rank 0
+    MPI_Reduce(&eval_flag, &global_eval_flag, 1, MPI_C_BOOL, MPI_LAND, 0, MPI_COMM_WORLD);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        if (global_eval_flag) {
+            printf("\nSorting: Correct!!!\n");
+        } else {
+            printf("\nSorting: Incorrect :(\n");
+        }
     }
-    fflush(stdout);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    validate_bitonic_sort(local_row, total_cols, rank, size);    
-    MPI_Barrier(MPI_COMM_WORLD);
 
     free(local_row);
 

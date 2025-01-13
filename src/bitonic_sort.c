@@ -27,24 +27,40 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
         for (int step = stage - 1; step >= 0; step--) {
             int partner = rank ^ (1 << step);  // Compute partner based on Hamming distance
             
-            if (partner < rows) {  // Ensure partner rank is valid
-                // Use MPI_Sendrecv for deadlock-free communication
-                MPI_Status status;
-                int result = MPI_Sendrecv(
-                    local_row, cols, MPI_INT, partner, 0,
-                    received_row, cols, MPI_INT, partner, 0,
-                    MPI_COMM_WORLD, &status
-                );
-
+            if (rank >= partner) {
+                int result = MPI_Send(local_row, cols, MPI_INT, partner, 0, MPI_COMM_WORLD);
                 if (result != MPI_SUCCESS) {
-                    fprintf(stderr, "Rank %d: MPI_Sendrecv failed\n", rank);
+                    fprintf(stderr, "Rank %d: MPI_Send failed\n", rank);
                     fflush(stderr);
                     MPI_Abort(MPI_COMM_WORLD, -1);
                 }
 
-                // Determine sorting direction based on rank comparison
-                bool sort_ascending = (rank < partner) ? is_ascending : !is_ascending;
-                pairwise_sort(local_row, received_row, cols, sort_ascending);
+                MPI_Status status;
+                result = MPI_Recv(local_row, cols, MPI_INT, partner, 0, MPI_COMM_WORLD, &status);
+                if (result != MPI_SUCCESS) {
+                    fprintf(stderr, "Rank %d: MPI_Recv failed\n", rank);
+                    fflush(stderr);
+                    MPI_Abort(MPI_COMM_WORLD, -1);
+                }
+                
+            } else
+            if (rank < partner && partner < rows) {
+                MPI_Status status;
+                int result = MPI_Recv(received_row, cols, MPI_INT, partner, 0, MPI_COMM_WORLD, &status);
+                if (result != MPI_SUCCESS) {
+                    fprintf(stderr, "Rank %d: MPI_Recv failed\n", rank);
+                    fflush(stderr);
+                    MPI_Abort(MPI_COMM_WORLD, -1);
+                }
+
+                pairwise_sort(local_row, received_row, cols, is_ascending);
+
+                result = MPI_Send(received_row, cols, MPI_INT, partner, 0, MPI_COMM_WORLD);
+                if (result != MPI_SUCCESS) {
+                    fprintf(stderr, "Rank %d: MPI_Send failed\n", rank);
+                    fflush(stderr);
+                    MPI_Abort(MPI_COMM_WORLD, -1);
+                }
             }
 
             MPI_Barrier(MPI_COMM_WORLD);

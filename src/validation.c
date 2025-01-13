@@ -27,49 +27,42 @@ bool is_localy_sorted(int* row, int cols, bool* is_ascending) {
 
 
 // Validates the correctness of the distributed bitonic sort
-void validate_bitonic_sort(int* local_row, int cols, int rank, int size) {
-    // Step 1: Check if the local row is sorted
-    bool is_locally_sorted = true;
+void validate_bitonic_sort(int* local_row, int cols, int rank, int size, bool* eval) {
+    *eval = true;
+
+    // Step 1: Check if the local row is sorted in ascending order
     for (int i = 0; i < cols - 1; i++) {
         if (local_row[i] > local_row[i + 1]) {
-            is_locally_sorted = false;
+            fprintf(stderr, "Validation failed: Rank %d's local row is not sorted.\n", rank);
+            fflush(stderr);
+            *eval = false;
             break;
         }
-    }
-
-    if (!is_locally_sorted) {
-        printf("Validation failed: Rank %d's local row is not sorted.\n", rank);
-        fflush(stdout);
-        return;
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Step 2: Check global order between ranks
-    int last_element = local_row[cols - 1];
-    int next_first_element;
+    int local_last_element = local_row[cols - 1];
+    int previous_last_element = 0;
 
     if (rank < size - 1) {
         // Send the last element to the next rank
-        MPI_Send(&last_element, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD);
+        MPI_Send(&local_last_element, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD);
     }
 
     if (rank > 0) {
-        // Receive the first element from the previous rank
-        MPI_Recv(&next_first_element, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        // Receive the last element from the previous rank
+        MPI_Recv(&previous_last_element, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         // Validate global order with the previous rank
-        if (next_first_element > local_row[0]) {
-            printf("Validation failed: Rank %d's first element (%d) is smaller than Rank %d's last element (%d).\n",
-                   rank, local_row[0], rank - 1, next_first_element);
-            fflush(stdout);
+        if (previous_last_element > local_row[0]) {
+            fprintf(stderr, "Validation failed: Rank %d's first element (%d) is smaller than Rank %d's last element (%d).\n",
+                   rank, local_row[0], rank - 1, previous_last_element);
+            fflush(stderr);
+            *eval = false;
         }
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
-    // // Step 3: Report success
-    // if (rank == 0) {
-    //     printf("Validation completed: All rows are sorted, and global order is correct.\n");
-    // }
 }
