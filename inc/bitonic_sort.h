@@ -6,8 +6,8 @@
 #include <stdbool.h>
 #include <math.h>
 #include <mpi.h>
-#include <utils.h>
-#include <row_sort_operations.h>
+#include "utils.h"
+#include "row_sort_operations.h"
 
 
 /**

@@ -39,10 +39,10 @@ int main(int argc, char* argv[]) {
 
     int* local_row = malloc(total_cols * sizeof(int));
     for (int i = 0; i < total_cols; i++) {
-        local_row[i] = rand() % 300;  // % RAND_MAX
+        local_row[i] = rand() % RAND_MAX;
     }
 
-    // Ensure all processes have initialized their data
+    // // Ensure all processes have initialized their data
     // MPI_Barrier(MPI_COMM_WORLD);
     // print_row(local_row, total_cols, rank, size);
 
@@ -64,6 +64,9 @@ int main(int argc, char* argv[]) {
         printf("Sorting Time: %f msec\n", maxTime * 1000);
         fflush(stdout);
     }
+
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // print_row(local_row, total_cols, rank, size);
 
     MPI_Barrier(MPI_COMM_WORLD);
 
