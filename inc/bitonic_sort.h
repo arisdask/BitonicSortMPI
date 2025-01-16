@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <string.h>
 #include <mpi.h>
 #include "utils.h"
 #include "row_sort_operations.h"

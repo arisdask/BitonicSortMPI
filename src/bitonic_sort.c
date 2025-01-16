@@ -37,13 +37,17 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
                     int send_tag = base_tag + offset; // Adjust tag by offset for chunk
                     int recv_tag = base_tag + offset;
 
-                    MPI_Isend(local_row + offset, current_chunk_size, MPI_INT, partner, send_tag, MPI_COMM_WORLD, &send_request);
+                    int* send_buff = malloc(sizeof(int) * current_chunk_size);
+                    memcpy(send_buff, local_row + offset, sizeof(int) * current_chunk_size);
+
+                    MPI_Isend(send_buff, current_chunk_size, MPI_INT, partner, send_tag, MPI_COMM_WORLD, &send_request);
                     MPI_Irecv(received_row + offset, current_chunk_size, MPI_INT, partner, recv_tag, MPI_COMM_WORLD, &recv_request);
 
                     MPI_Wait(&recv_request, MPI_STATUS_IGNORE);
                     pairwise_sort(local_row + offset, received_row + offset, current_chunk_size, (rank < partner) ? is_ascending : !is_ascending);
 
                     MPI_Wait(&send_request, MPI_STATUS_IGNORE);
+                    free(send_buff);
                 }
             }
 
