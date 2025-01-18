@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --partition=batch
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
+#SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1
 #SBATCH --time=00:05:00
-#SBATCH --output=logs/case_20_1_%j.out
-#SBATCH --error=logs/case_20_1_%j.err
+#SBATCH --output=logs/case_26_2_%j.out
+#SBATCH --error=logs/case_26_2_%j.err
 
 # Load required modules
 module load gcc openmpi
@@ -21,4 +21,4 @@ export UCX_WARN_UNUSED_ENV_VARS=n
 # Run the program using srun
 # Usage: $0 <q: 2^q numbers/process> <p: 2^p processes>
 # When we change the number of processes (2^p) we should set the nodes/ntasks-per-node
-srun ./bin/bitonic_mpi 20 1
+srun ./bin/bitonic_mpi 26 2
