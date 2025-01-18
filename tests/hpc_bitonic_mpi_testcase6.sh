@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=rome
-#SBATCH --nodes=4
-#SBATCH --ntasks-per-node=32
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=128
 #SBATCH --cpus-per-task=1
 #SBATCH --time=00:10:00
 #SBATCH --output=logs/case_20_7_%j.out
