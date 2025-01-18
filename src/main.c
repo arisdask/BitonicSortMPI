@@ -57,14 +57,15 @@ int main(int argc, char* argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Find the maximum time across all processes
-    double maxTime;
-    MPI_Reduce(&localTime, &maxTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    double sumTime;
+    MPI_Reduce(&localTime, &sumTime, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        printf("Sorting Time: %f msec\n", maxTime * 1000);
+        printf("Sorting Time: %f msec\n", (sumTime / size) * 1000);
         fflush(stdout);
     }
 
+    // // Ensure all processes hold the sorted result
     // MPI_Barrier(MPI_COMM_WORLD);
     // print_row(local_row, total_cols, rank, size);
 

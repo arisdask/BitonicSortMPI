@@ -13,6 +13,9 @@ if ! [[ "$VALUE1" =~ ^[0-9]+$ ]] || ! [[ "$VALUE2" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
+# Calculate 2^VALUE2
+NUM_PROCESSES=$((2**VALUE2))
+
 # Clean, build, and run the program:
 make clean
 make
@@ -22,4 +25,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-mpirun -np 8 ./bin/bitonic_mpi "$VALUE1" "$VALUE2"
+# Run the program using mpirun
+# Usage: $-np <2^p: 2^p processes> ./bin/bitonic_mpi <q: 2^q numbers/process> <p: 2^p processes>
+mpirun -np "$NUM_PROCESSES" ./bin/bitonic_mpi "$VALUE1" "$VALUE2"

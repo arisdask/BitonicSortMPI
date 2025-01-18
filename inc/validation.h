@@ -1,3 +1,6 @@
+#ifndef VALIDATION_H
+#define VALIDATION_H
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <mpi.h>
@@ -29,3 +32,5 @@ bool is_localy_sorted(int* row, int cols, bool* is_ascending);
  *                   false otherwise.
  */
 void validate_bitonic_sort(int* local_row, int cols, int rank, int size, bool* eval);
+
+#endif
