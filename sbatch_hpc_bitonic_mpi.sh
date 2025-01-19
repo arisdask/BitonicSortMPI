@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=batch
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=4
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=1
 #SBATCH --time=00:05:00
 #SBATCH --output=logs/bitonic_sort_%j.out
