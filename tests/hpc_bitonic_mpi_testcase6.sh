@@ -15,7 +15,6 @@ export UCX_WARN_UNUSED_ENV_VARS=n
 
 # In case of `UCX  ERROR connect(fd=.., dest_addr=..) failed: Connection timed out` 
 # uncomment *one* of the following exports (recommended to use tcp) to ensure "safer" transportation of data:
-# export UCX_TLS=tcp               # Use TCP for UCX transport
 # export UCX_RNDV_TIMEOUT=5000     # Time in milliseconds
 
 # Run the program using srun

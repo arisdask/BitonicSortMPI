@@ -10,6 +10,9 @@ fi
 i=$1
 j=${2:-$1} # If j is not provided, set j to i
 
+make clean
+make
+
 # Handle the case where i = -1 (run all test cases)
 if [ "$i" -eq -1 ]; then
     echo "Running all test cases..."
@@ -48,3 +51,5 @@ for num in $(seq "$i" "$j"); do
         echo "Warning: $script not found, skipping..."
     fi
 done
+
+squeue -u "$USER"
