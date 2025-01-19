@@ -18,6 +18,7 @@ NUM_PROCESSES=$((2**VALUE2))
 
 # Clean, build, and run the program:
 make clean
+module load gcc openmpi
 make
 
 if [ $? -ne 0 ]; then

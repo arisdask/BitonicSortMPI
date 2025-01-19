@@ -10,7 +10,9 @@ fi
 i=$1
 j=${2:-$1} # If j is not provided, set j to i
 
+# Clean, build, and run the program:
 make clean
+module load gcc openmpi
 make
 
 # Handle the case where i = -1 (run all test cases)
