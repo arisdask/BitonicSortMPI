@@ -1,7 +1,7 @@
 #include "../inc/bitonic_sort.h"
 
-// Version 4 (Optimized Communications and time measurements - tested)
-#define CHUNK_DIVISOR        8      // Number of chunks to split the data into to transmit
+// Version 4 (Optimized Memory Management - tested)
+#define CHUNK_DIVISOR        8      // Number of chunks to split the data into to transmit (must be power of 2)
 #define PRINT_TIME_LOGS      0      // 0: Do not print | 1: prints time measurements' logs if they cost more than `MIN_TIME_THRESHOLD`
 #define MIN_TIME_THRESHOLD   2.0    // Defines the minimum time threshold to be printed
 
@@ -10,7 +10,6 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 
     // Pre-allocate buffer for communications
     int* received_row = malloc(cols * sizeof(int));
-    int* send_buff = malloc(cols * sizeof(int));
     if (!received_row) {
         fprintf(stderr, "Rank %d: Memory allocation failed\n", rank);
         MPI_Abort(MPI_COMM_WORLD, -1);
@@ -36,8 +35,6 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
             int partner = rank ^ (1 << step);  // Compute partner based on Hamming distance
 
             if (rank != partner && partner < rows) {
-                memcpy(send_buff, local_row, sizeof(int) * cols);
-
                 int base_tag = (stage << 8) | step; // Combine stage and step into a unique tag
 
                 // Determine chunk size
@@ -54,7 +51,7 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
                         int send_tag = (chunk_idx << 16) | base_tag;
                         int recv_tag = (chunk_idx << 16) | base_tag;
 
-                        MPI_Isend(send_buff + offset, current_chunk_size, MPI_INT, partner, send_tag, MPI_COMM_WORLD, &send_request[chunk_idx]);
+                        MPI_Isend(local_row + offset, current_chunk_size, MPI_INT, partner, send_tag, MPI_COMM_WORLD, &send_request[chunk_idx]);
                         MPI_Irecv(received_row + offset, current_chunk_size, MPI_INT, partner, recv_tag, MPI_COMM_WORLD, &recv_request[chunk_idx]);
                     }
                 }
@@ -65,19 +62,14 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
                     int current_chunk_size = (offset + chunk_elements <= cols) ? chunk_elements : cols - offset;
 
                     if (current_chunk_size > 0) {
+                        MPI_Wait(&send_request[chunk_idx], MPI_STATUS_IGNORE);
                         MPI_Wait(&recv_request[chunk_idx], MPI_STATUS_IGNORE);
                         pairwise_sort(local_row + offset, received_row + offset, current_chunk_size, (rank < partner) ? is_ascending : !is_ascending);
                     }
                 }
                 end_time = MPI_Wtime();
                 if (end_time - start_time > MIN_TIME_THRESHOLD && PRINT_TIME_LOGS != 0) 
-                    printf("Rank %d: Entire receive process and pairwise_sort took %.6f seconds\n", rank, end_time - start_time);
-
-                start_time = MPI_Wtime(); // Start timing for waiting on all sends
-                MPI_Waitall(chunk_count, send_request, MPI_STATUS_IGNORE);
-                end_time = MPI_Wtime();
-                if (end_time - start_time > MIN_TIME_THRESHOLD && PRINT_TIME_LOGS != 0) 
-                    printf("Rank %d: Waiting for all sends took %.6f seconds\n", rank, end_time - start_time);
+                    printf("Rank %d: Entire send/receive process and pairwise_sort took %.6f seconds\n", rank, end_time - start_time);
             }
         }
 
@@ -91,15 +83,16 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 
     // Clean up
     free(received_row);
-    free(send_buff);
 }
 
 
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// // Version 3 (Optimized Communications - tested)
-// #define CHUNK_DIVISOR 16  // Number of chunks to split the data into
+// // Version 3 (Optimized Communications and time measurements - tested)
+// #define CHUNK_DIVISOR        8      // Number of chunks to split the data into to transmit
+// #define PRINT_TIME_LOGS      0      // 0: Do not print | 1: prints time measurements' logs if they cost more than `MIN_TIME_THRESHOLD`
+// #define MIN_TIME_THRESHOLD   2.0    // Defines the minimum time threshold to be printed
 
 // void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 //     int stages = (int)log2(rows);
@@ -113,7 +106,11 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 //     }
 
 //     // Step 1: Initial alternating sorting
+//     double start_time = MPI_Wtime();
 //     initial_alternating_sort(local_row, cols, rank);
+//     double end_time = MPI_Wtime();
+//     if (end_time - start_time > MIN_TIME_THRESHOLD && PRINT_TIME_LOGS != 0) 
+//         printf("Rank %d: initial_alternating_sort took %.6f seconds\n", rank, end_time - start_time);
 //     MPI_Barrier(MPI_COMM_WORLD);
 
 //     // Step 2: Iterative bitonic stages
@@ -129,6 +126,7 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 
 //             if (rank != partner && partner < rows) {
 //                 memcpy(send_buff, local_row, sizeof(int) * cols);
+
 //                 int base_tag = (stage << 8) | step; // Combine stage and step into a unique tag
 
 //                 // Determine chunk size
@@ -136,6 +134,7 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 //                 int chunk_elements = (cols + chunk_count - 1) / chunk_count;
 //                 MPI_Request send_request[chunk_count], recv_request[chunk_count];
 
+//                 start_time = MPI_Wtime(); // Start timing for the entire send/receive process
 //                 for (int chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
 //                     int offset = chunk_idx * chunk_elements;
 //                     int current_chunk_size = (offset + chunk_elements <= cols) ? chunk_elements : cols - offset;
@@ -149,7 +148,7 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 //                     }
 //                 }
 
-//                 // Wait for communications to complete and perform pairwise sort
+//                 // Wait for each communication to complete and perform pairwise sort
 //                 for (int chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
 //                     int offset = chunk_idx * chunk_elements;
 //                     int current_chunk_size = (offset + chunk_elements <= cols) ? chunk_elements : cols - offset;
@@ -159,17 +158,29 @@ void bitonic_sort(int* local_row, int rows, int cols, int rank) {
 //                         pairwise_sort(local_row + offset, received_row + offset, current_chunk_size, (rank < partner) ? is_ascending : !is_ascending);
 //                     }
 //                 }
+//                 end_time = MPI_Wtime();
+//                 if (end_time - start_time > MIN_TIME_THRESHOLD && PRINT_TIME_LOGS != 0) 
+//                     printf("Rank %d: Entire receive process and pairwise_sort took %.6f seconds\n", rank, end_time - start_time);
 
+//                 start_time = MPI_Wtime(); // Start timing for waiting on all sends
 //                 MPI_Waitall(chunk_count, send_request, MPI_STATUS_IGNORE);
+//                 end_time = MPI_Wtime();
+//                 if (end_time - start_time > MIN_TIME_THRESHOLD && PRINT_TIME_LOGS != 0) 
+//                     printf("Rank %d: Waiting for all sends took %.6f seconds\n", rank, end_time - start_time);
 //             }
 //         }
 
 //         // Local elbow sort after each stage
+//         start_time = MPI_Wtime();
 //         elbow_sort(local_row, cols, is_ascending);
+//         end_time = MPI_Wtime();
+//         if (end_time - start_time > MIN_TIME_THRESHOLD && PRINT_TIME_LOGS != 0) 
+//             printf("Rank %d: elbow_sort for stage %d took %.6f seconds\n", rank, stage, end_time - start_time);
 //     }
 
 //     // Clean up
 //     free(received_row);
+//     free(send_buff);
 // }
 
 
