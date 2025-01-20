@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=rome
+#SBATCH --partition=batch
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=1

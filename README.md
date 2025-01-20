@@ -110,6 +110,8 @@ sbatch sbatch_hpc_bitonic_mpi.sh
 ```
 _**Remember** to `make clean` and `make` the project after any code implementation changes while using this script._
 
+>**Keep in mind** when we change the number of processes $2^p$ we should also change the configurations ($\texttt{nodes} \times \texttt{ntasks-per-nodes} = 2^p$) in the SLURM script to align with our changes.
+
 
 ## Handling Potential Communication Issues
 
