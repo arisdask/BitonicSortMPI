@@ -1,0 +1,383 @@
+\documentclass[12pt]{article}
+
+\usepackage[english]{babel}
+
+\title{\textbf{\textsf{Hybrid Distributed Sort \\ with Bitonic Interchanges}}}
+\date{\today}
+
+% math
+\usepackage{amsmath, amssymb}
+\usepackage{enumitem}
+\usepackage{xcolor}
+
+\usepackage{algorithm}        % For the algorithm environment
+\usepackage{algpseudocode}    % For algorithmic commands and pseudocode formatting
+
+\usepackage{ulem}
+
+% references
+\usepackage[style=apa, backend=biber]{biblatex}
+
+% fonts
+\usepackage{helvet}
+\usepackage{sectsty}
+\allsectionsfont{\sffamily} % for section titltes use sans-serif
+% \renewcommand{\familydefault}{\sfdefault} % comment out for sans-serif font
+% \usepackage{sansmath} % comment out for sans-serif math font
+% \sansmath % comment out for sans-serif math font
+
+% margins
+\usepackage{geometry}
+\geometry{
+  a4paper,
+  total={170mm,257mm},
+  left=25mm,
+  right=25mm,
+  top=30mm,
+  bottom=30mm,
+}
+
+% no indentation when a new paragraph starts
+\setlength{\parindent}{0cm}
+
+% links
+\usepackage{hyperref} % better links
+\usepackage{color}    % nicer link colors
+\definecolor{pigment}{rgb}{0.2, 0.2, 0.6}
+\hypersetup{
+  colorlinks = true, % Color links instead of ugly boxes
+  urlcolor   = pigment, % Color for external hyperlinks
+  linkcolor  = black, % Color for internal links
+  citecolor  = pigment % Color for citations
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% headers  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Distributed Bitonic Sort}
+\chead{}
+\rhead{Intro}
+
+% example boxes
+\usepackage{tcolorbox}
+\newtcolorbox{examplebox}[1]{%
+  colback=white,
+  colframe=gray!30,
+  title={#1},
+  sharp corners,
+  boxrule=0.5pt,
+  coltitle=black
+}
+
+
+% conditionals
+\usepackage{ifthen}
+\newboolean{showinstructions}
+\newboolean{showexamples}
+\newboolean{showexplanations}
+\renewenvironment{examplebox}[1]{%
+  \ifthenelse{\boolean{showexamples}}%
+    {\begin{tcolorbox}[colback=white, colframe=gray!30, title={#1}, sharp corners, boxrule=0.5pt, coltitle=black]}%
+    {\expandafter\comment}%
+}{%
+  \ifthenelse{\boolean{showexamples}}%
+    {\end{tcolorbox}}%
+    {\expandafter\endcomment}%
+}
+
+% Define a new environment for explanations
+\newcommand{\explanation}[1]{%
+  \ifthenelse{\boolean{showexplanations}}%
+    {\textit{Explanation:} #1}%
+    {\ignorespaces}%
+}
+
+% Define a new environment for instructions
+\newcommand{\instructions}[1]{%
+  \ifthenelse{\boolean{showinstructions}}%
+    {#1}%
+    {\ignorespaces}%
+}
+
+\makeatletter
+\newcommand{\maketitlepage}{%
+    \begin{titlepage}
+        \maketitle
+        \thispagestyle{empty}
+        \vfill 
+        \centering
+        \author{\textbf{Author: Aristeidis Daskalopoulos}} \\
+        Github Repo: \url{https://github.com/arisdask/BitonicSortMPI} \\ 
+        \textit{A Parallel \& Distributed Systems' Project}
+        \vfill 
+    \end{titlepage}
+    \newpage
+}
+\makeatother
+
+% Optional user settings
+\setboolean{showinstructions}{true} % set to false to hide instructions
+\setboolean{showexamples}{true} % set to false to hide examples
+\setboolean{showexplanations}{true} % set to false to hide explanations
+
+\begin{document}
+\maketitlepage
+
+\instructions{\section{Intro}
+\subsection*{Problem Introduction}
+The primary objective of this project is the implementation of a distributed bitonic sort algorithm. Specifically, given the number of processes, denoted as \( p \), that can execute concurrently on the Aristotelis HPC system, each process is assigned a random list of numbers of size \( q \). \textit{In more domain-specific applications, these datasets may not be random but instead extracted from a large predefined list}. The task is to sort all \( p \times q \) elements by implementing inter-process communication using the Hamming distance. In more detail, the data exchanges follow the edges of a hypercube, whose dimensionality corresponds to the binary logarithm of the number of processes.
+
+This work focuses on parallel systems with distributed memory and the message-passing model, MPI. The core algorithm under consideration is the `hybrid' bitonic sort, which dictates the communication steps among processes running on different computational nodes. Each process manages a portion of the data, as well as the corresponding positions (addresses) for sorting, and exchanges data with other processes. These exchanges indicates that each process holds - at most - two lists of data, the \textit{local and the received}. 
+
+At the end of the sorting process, the data should be fully sorted and distributed across all processes. For instance, process 0 should hold the first segment of the sorted data, process 1 the next segment, and so forth, ensuring a contiguous distribution of the sorted results across the processes.
+
+\begin{examplebox}{Note}
+    To better understand the concept and implementation, we can ``visualize'' the system of processes as a matrix. In this abstraction, the \textcolor{red}{\textbf{\textit{rows}}} of the matrix represent the different \textcolor{red}{\textbf{\textit{processes}}}, while the \textcolor{blue}{\textbf{\textit{columns}}} within each row correspond to the \textcolor{blue}{\textbf{\textit{numbers held}}} by each process in the distributed memory system. This matrix, denoted as \( A \), is a \( p \times q \) matrix. Such a representation provides a clearer perspective on how inter-process communications are performed and how the algorithm operates.
+\end{examplebox}
+
+
+\subsection*{Repo Layout} 
+The repository includes the following:
+
+\begin{itemize}[noitemsep]
+    \item The MPI Bitonic Sort implementation written in C, with a main function that validates the final sorting before returning 0. For the source code, refer to the \texttt{inc} and \texttt{src} folders.
+    \item Scripts to build and run various test cases (for different numbers of nodes, tasks per node and elements per process). Refer to the \texttt{tests} folder to view all the scripts and test cases.
+    \item Log files and results from running the code on the Aristotelis HPC, which document the time taken and whether the sorting was successful. A brief \texttt{report.md} file contains a table summarizing all the test runs and highlights key outcomes derived from these results. \textit{For detailed test results, check this markdown file.}
+    \item A Julia implementation of the Bitonic Sort algorithm, providing a better theoretical understanding of the algorithm in a Julia Pluto notebook demonstrating the algorithm. For more details about the algorithm’s functionality, refer to the notebook in the \texttt{julia} folder.
+    \item A detailed \texttt{README.md} file with instructions on how to set up and run the project correctly. For more information about the repository, refer to this README file.
+\end{itemize}
+
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% headers  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagestyle{fancy}
+\lhead{Distributed Bitonic Sort}
+\chead{}
+\rhead{Theoretical Algorithm Analysis}
+
+\section{Theoretical Algorithm Analysis}
+In this section, we introduce the bitonic sort algorithm that has been implemented. We explain its theoretical foundation, detailing how it functions step-by-step. Following this, we calculate its complexity, identify areas for potential optimization, and compare its performance with the classical serial approach to sorting.
+
+\subsection{First Algorithmic Approach}
+
+\vspace{-10pt}
+
+\begin{algorithm}
+\caption{Initial Implementation of Hybrid Bitonic Sort}
+\begin{algorithmic}[1]
+\Require{\textit{\textbf{local\_row}}: the array of integers that the process holds, \textit{\textbf{rows}}: total number of processes, \textit{\textbf{cols}}: size of local array, \textit{\textbf{rank}}: current process rank}
+\Ensure{\textit{Full sorted array, distributed across all processes}}
+
+\State stages $\gets \lfloor \log_2(\text{rows}) \rfloor$
+\State received\_row $\gets$ AllocateBuffer(cols) \Comment{Pre-allocate communication buffer}
+
+\State InitialAlternatingSort(local\_row, cols, rank)
+\State Synchronize() \Comment{MPI Barrier}
+
+\For{stage $\gets 1$ to stages}
+    \State num\_chunks $\gets 2^{\text{stages} - \text{stage}}$
+    \State chunk\_size $\gets \text{rows} / \text{num\_chunks}$
+    \State chunk $\gets \lfloor \text{rank} / \text{chunk\_size} \rfloor$
+    \State is\_ascending $\gets$ (chunk mod 2 = 0)
+    
+    \For{step $\gets$ stage $-$ 1 downto 0}
+        \State partner $\gets$ rank $\oplus$ $2^{\text{step}}$ \Comment{XOR for Hamming distance}
+        
+        \If{rank $\geq$ partner}
+            \State Send(local\_row, partner)  \Comment{Send current local row to partner}
+            \State Receive(local\_row, partner)  \Comment{Receive new local row after `PairwiseSort'}
+        \ElsIf{rank $<$ partner \textbf{and} partner $<$ rows}
+            \State Receive(received\_row, partner)  \Comment{Receive local row of partner}
+            \State PairwiseSort(local\_row, received\_row, cols, is\_ascending)
+            \State Send(received\_row, partner)  \Comment{Send new local row after `PairwiseSort'}
+        \EndIf
+        
+        \State Synchronize() \Comment{MPI Barrier}
+    \EndFor
+    
+    \State ElbowSort(local\_row, cols, is\_ascending)
+    \State Synchronize() \Comment{MPI Barrier}
+\EndFor
+
+\State FreeBuffer(received\_row)
+\end{algorithmic}
+\end{algorithm}
+
+\newpage
+
+\subsection{Explaining the Algorithm}
+Here, we provide a detailed explanation of how the above algorithm works. We describe the key stages of the algorithm, the role of each process, and how data exchanges occur to achieve the final sorted outcome.
+
+\begin{enumerate}[nosep]
+    \item \textbf{Initialization:}
+    \begin{itemize}[noitemsep]
+        \item Compute the total number of stages as $\texttt{stages} = \log_2(\texttt{rows})$. The stages of the algorithm execute sequentially, and they are defined based on the total number of processes (or rows, as described in the matrix analogy introduced earlier). Each stage coordinates the sorting steps across processes, ensuring that data is progressively aligned and sorted according to the bitonic sort logic.
+        \item Allocate a buffer for communication between processes. This buffer is used to store the list of numbers received from the process it is communicating with.
+    \end{itemize}
+
+    \item \textbf{Initial Alternating Sort:}
+    \begin{itemize}[noitemsep]
+        \item Perform an initial alternating sort on the local row using the function \\ \texttt{initial\_alternating\_sort}.
+        \item Synchronize all processes using an \texttt{MPI\_Barrier}: We want to ensure that all processes performed their local sort (ascending or descending based on the process id/rank) before starting the communications needed at each step.
+    \end{itemize}
+
+    \item \textbf{Iterative Bitonic Stages:}
+    \begin{itemize}[noitemsep]
+        \item For each stage from $1$ to $\texttt{stages}$:
+        \begin{enumerate}
+            \item Compute the number of chunks and chunk size:
+            \[
+            \texttt{num\_chunks} = 2^{\texttt{stages} - \texttt{stage}}, \quad
+            \texttt{chunk\_size} = \frac{\texttt{rows}}{\texttt{num\_chunks}}
+            \]
+            In all stages, except for the final one, not all processes need to communicate with each other. For instance, in stage 2, the initial communication occurs between \texttt{pid 0} and \texttt{pid 2}, as well as \texttt{pid 1} and \texttt{pid 3}. Subsequently, communication happens between \texttt{pid 0} and \texttt{pid 1}, and between \texttt{pid 2} and \texttt{pid 3}. In this stage, \texttt{pid 0} to \texttt{pid 3} operate independently from the other processes, \textit{\textbf{forming their own chunk}}. At each step, these chunks define which processes will communicate exclusively with each other.
+            
+            \item To determine the chunk to which the current process belongs and whether the sort should be in ascending order, we have:
+            \[
+            \texttt{chunk} = \lfloor \texttt{rank} / \texttt{chunk\_size} \rfloor, \quad
+            \texttt{is\_ascending} = (\texttt{chunk} \bmod 2 = 0)
+            \]
+            After the internal communication between the correct partners within each chunk, the chunk should be fully sorted in ascending order if \texttt{is\_ascending} is \texttt{true}; otherwise, it will be sorted in descending order. Achieving this requires executing the appropriate internal communication between the designated partners and applying the correct functions accordingly. 
+            
+            \item Perform internal iterative steps for each bitonic merge stage:
+            \begin{enumerate}[noitemsep]
+                \item Compute the communication partner of the local process based on Hamming distance:
+                \[
+                \texttt{partner} = \texttt{rank} \oplus 2^{\texttt{step}}
+                \]
+                We begin with \(\texttt{step} = \texttt{stage} - 1\) and decrement it until it reaches zero. This approach ensures that communication starts with the most ``distant'' processes and progressively moves to the nearest ones. Within each chunk, this part must also execute sequentially: first handling the more distant communications and then reducing the distance to handle closer ones. This process forms a loop that consists of \(\log_2(\texttt{rows})\) steps.
+                
+                \item We have two cases:
+                \begin{itemize}
+                    \item If \texttt{rank} $\geq$ \texttt{partner}:
+                    \begin{enumerate}[noitemsep]
+                        \item Send local row to partner process
+                        \item Receive sorted row back from partner process
+                    \end{enumerate}
+
+                    \item If \texttt{rank} $<$ \texttt{partner} and \texttt{partner} $<$ \texttt{rows}:
+                    \begin{enumerate}[noitemsep]
+                        \item Receive row from partner process
+                        \item Perform pairwise sort, of local row and received row, based on is\_ascending flag
+                        \item Send sorted received row back to partner
+                    \end{enumerate}
+                \end{itemize}
+                
+                \item Synchronize all processes using \texttt{MPI\_Barrier}
+            \end{enumerate}
+            \item Perform the elbow sort on the local row using the function \texttt{elbow\_sort}.
+            \item Synchronize all processes using \texttt{MPI\_Barrier}.
+        \end{enumerate}
+    \end{itemize}
+
+    \item \textbf{Cleanup:}
+    \begin{itemize}[noitemsep]
+        \item Free the allocated communication buffer.
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{Time Complexity}
+From the algorithm's explanation, we derived that certain iterations must be performed sequentially. The first such iteration is the number of stages required to complete the sorting. This part has a total time complexity of \(O(\log p)\), where \(p\) is the total number of processes (or rows in our matrix analogy). For each stage, we also perform \(O(\log p)\) steps: initially communicating with the most distant partners, followed by communication with the nearest ones. Therefore, the total time complexity is:
+
+\[
+O(\log^2 p) \times \left( \text{time complexity of the communication} + \text{pairwise sort time} \right) + \\ 
+\]
+
+\vspace{-20pt}
+
+\[
+O(\log p) \times \text{local elbow sort time}.
+\]
+
+The elbow sort itself takes \(O(2 \cdot n)\) time: one \(n\) for finding the elbow and another \(n\) for sorting the two parts ($n$ is the number elements/numbers the local list has, in our matrix analog is represented by the number of columns of the matrix). The pairwise sort maintains the smallest values from each pair within the local process if \(\texttt{is\_ascending} == \texttt{true}\). Specifically, given two lists \(\texttt{local\_list}\) and \(\texttt{received\_list}\), the \(i\)-th pair is the element \([\texttt{local\_list}[i], \texttt{received\_list}[i]]\). Thus, the time complexity for this process is also \(O(n)\).
+
+Of course, we cannot complete the time complexity analysis without addressing the initial local sorting algorithm. This algorithm has a time complexity of \(O(n \cdot \log n)\), and as we can observe, it is the second most time-inefficient term, following the term related to the communication between processes.
+
+
+\subsection{Algorithm's Optimization}
+Focusing on the two terms that, in the previous analysis, seem to significantly slow down the implemented algorithm, we propose the following solutions:
+
+\textbf{For the initial \texttt{qsort}:}
+
+\vspace{-15pt}
+\begin{itemize}[noitemsep]
+    \item If each process supports only one thread, we cannot improve the time complexity beyond \(O(n \log n)\).
+    \item However, if we have access to multiple threads (let's say \(t\), where \(t \leq n\) and \(t \mid n\) - $t$ divides $n$), we can implement a multithreaded bitonic sort. The practical implementation is nearly identical to the distributed version, with the main difference being the need to clean up and implement a wrapper function.
+    \item Because this aspect is not a primary objective, and the main focus of this project is to `enhance' the communication time between processes, the provided/tested timing results are obtained by simply applying the \texttt{qsort} algorithm to the local data.
+ 
+\end{itemize}
+
+\textbf{For the communication time \textit{we implemented} the following optimizations to our algorithm:}
+
+\vspace{-15pt}
+\begin{itemize}[noitemsep]
+    \item There are two types of communication: \textit{send} and \textit{receive}. When receiving the data to perform the pairwise sort, we do not need to send the entire list in a single piece. Instead, we can send it in multiple smaller pieces (let's say \(s\)). After receiving the first piece, we can begin running the first part of the pairwise sort.
+    \item In the initial algorithm, the process sends its local values to its partner. The partner performs a pairwise sort operation (retaining either the minimum or maximum values as explained) and then returns the updated list to the original process. However, we can \textit{eliminate this second transmission}, following the pairwise sort, by introducing an additional send operation during the initial exchange of local values. In this approach, the process and its partner exchange their initial local values \underline{\textit{simultaneously}}, allowing both to independently perform the corresponding pairwise sort operation. Each retains the appropriate values based on their respective process ID.
+
+\end{itemize}
+
+
+\subsection{Comparison with the Serial Approach}
+The total sorting problem, given the segmentation we already follow, has a size of \( p \times n \), where \( p \) is the number of processes and \( n \) is the number of elements per process. A classical serial approach would involve implementing a merge sort or a quicksort, resulting in a total time complexity of \( O(n \cdot p \cdot \log(n \cdot p)) \). However, this does not account for the fact that the entire problem, given the restrictions on \( p \) and \( n \), could result in a data size that reaches 68.8GB! This means that a serial implementation would require writing data to disk or necessitate extremely costly RAM, exceeding 70GB. From this, we can conclude that \textit{the hybrid distributed sort} we proposed and implemented makes the whole procedure \textit{\textbf{practically feasible}}. \\
+
+Now that we have established the theoretical foundation, we proceed to examine the validation tests and corresponding results.
+
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% headers  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagestyle{fancy}
+\lhead{Distributed Bitonic Sort}
+\chead{}
+\rhead{Validation Tests \& Results}
+
+\section{Validation Tests \& Results}
+
+In this section, we will describe the methodology used for validation and the calculation of results. To maintain clarity and keep this section free of results and diagrams, these have been included in the \texttt{report.md} file located in the \texttt{/log} folder of our repository. Additionally, this markdown file contains diagrams that visualize the performance of our algorithm executed on the ``Aristotelis HPC".
+
+
+\subsection{Validation Tests Explained}
+
+The validation process is executed immediately after the completion of all bitonic interchanges. It is divided into two parts:
+
+\begin{itemize}
+    \item \textbf{Part 1: Local Sorting Validation}  
+    Each process verifies that the data it holds is locally sorted. This step ensures that all bitonic sequences were sorted locally correctly using the \textit{elbow sort} function.
+
+    \item \textbf{Part 2: Global Sorting Validation}  
+    After confirming the correctness of local sorting for each process, the global sorting correctness is validated. This is achieved as follows: each process, from rank 0 to (total processes $- 1$), sends its last value to the next process in sequence (e.g., process 0 sends to process 1, process 1 sends to process 2, and so on). The receiving process compares the received value with its first local element. If the received value is greater than the first local element, \textit{the sorting is deemed incorrect. } 
+    Once all processes complete this check, they send a boolean value (\texttt{true} for correct sorting, \texttt{false} for incorrect sorting) to rank 0. If one or more processes report \texttt{false}, rank 0 prints a message indicating that the sorting was incorrect.
+\end{itemize}
+
+
+\subsection{Explanation of the log files}
+
+The \texttt{/log} directory contains the results of executing all the \texttt{.sh} test scripts located in the \texttt{/tests} folder. For each test run, two files are generated: a \texttt{.out} file and a \texttt{.err} file.  
+
+\vspace{-10pt}
+
+\begin{itemize}[noitemsep]
+    \item \textbf{\texttt{.out} Files:} These files include the total sorting time in milliseconds, as well as an indicator confirming whether the sorting was successfully completed.  
+
+    \item \textbf{\texttt{.err} Files:} These files provide detailed information about any issues that occurred during execution, particularly if the sorting was unsuccessful. Common issues might include the job being terminated due to time limits or other runtime errors.
+\end{itemize}
+
+\vspace{-10pt}
+
+Each file follows the naming format \texttt{A\_B\_C.*}, where \texttt{A} represents $2^A$ numbers per process, \texttt{B} represents $2^B$ processes and \texttt{C} is the job's ID.
+
+
+\subsection{Nodes and Tasks per nodes}
+
+As noted in \texttt{report.md}, when we aim to use, for example, 32 processes and allocate them across 4 nodes with 8 tasks per node, the execution time is generally less efficient compared to using fewer nodes with more tasks per node. This behavior arises because inter-node communication is significantly more costly than intra-node communication among tasks within the same node.
+
+Inter-node communication involves data transfer across the network, which introduces additional latency and bandwidth limitations compared to intra-node communication, which leverages faster data exchange mechanisms.
+
+Conversely, keeping more tasks within the same node is far more efficient due to higher throughput. This efficiency highlights the importance of optimizing the distribution of tasks across nodes to minimize communication overhead and improve overall performance.
+
+
+
+\newpage
+
+\end{document}
