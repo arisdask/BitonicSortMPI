@@ -12,9 +12,9 @@ Running our implementation for $q = [20, 23, 26, 27]$ and $p = [1:7]$, we presen
 > **Note:** 
 > The time measurements presented here are based on the current traffic of the *Aristotelis HPC system* at the time our tests were conducted. This traffic can influence the overall sorting time by affecting the communication speed (making it faster or slower). Results may vary under different network conditions.
 
-When running this implementation, we adjust the `CHUNK_DIVISOR` parameter in the $\texttt{src/bitonic\_sort.c}$ file. *Fine-tuning this variable based on the current network traffic may lead to better results.* Adjusting this parameter based on the scale of the problem will also influence the resulting sorting time. During testing across various test cases, we maintain this variable at a constant value to ensure better validation and facilitate comparison of the final results.
+When running this implementation, we adjust the `CHUNK_DIVISOR` parameter in the $\texttt{src/bitonic-sort.c}$ file. *Fine-tuning this variable based on the current network traffic may lead to better results.* Adjusting this parameter based on the scale of the problem will also influence the resulting sorting time. During testing across various test cases, we maintain this variable at a constant value to ensure better validation and facilitate comparison of the final results.
 
-> Tip: To ***print each steps traffic logs***, enable the `PRINT_TIME_LOGS` option in the $\texttt{src/bitonic\_sort.c}$ file.
+> Tip: To ***print each steps traffic logs***, enable the `PRINT_TIME_LOGS` option in the $\texttt{src/bitonic-sort.c}$ file.
 
 ---
 
